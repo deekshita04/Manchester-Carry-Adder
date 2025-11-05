@@ -1,0 +1,60 @@
+
+.include TSMC_180nm.txt
+.param SUPPLY=1.8
+.param LAMBDA=0.09u
+.global gnd vdd
+.param W = 10*LAMBDA
+
+
+Vdd	vdd	gnd	'SUPPLY'
+vin_x1 a1 0 pulse 0 1.82 0ns 1ns 1ns 10ns 20ns
+vin_x2 a2 0 pulse 0 1.82 0ns 1ns 1ns 20ns 40ns
+
+.subckt inv y x vdd gnd width_P=0 width_N=0
+M1      y       x       gnd     gnd  CMOSN   W=width_N   L={2*LAMBDA}
++ AS={5*width_N*LAMBDA} PS={10*LAMBDA+2*width_N} AD={5*width_N*LAMBDA} PD={10*LAMBDA+2*width_N}
+M2      y       x       vdd     vdd  CMOSP   W=width_P   L={2*LAMBDA}
++ AS={5*width_P*LAMBDA} PS={10*LAMBDA+2*width_P} AD={5*width_P*LAMBDA} PD={10*LAMBDA+2*width_P}
+.ends inv
+
+.subckt nmos d g s width_N=0
+M1      d       g       s     gnd     CMOSN   W=width_N   L={2*LAMBDA}
++ AS={5*width_N*LAMBDA} PS={10*LAMBDA+2*width_N} AD={5*width_N*LAMBDA} PD={10*LAMBDA+2*width_N}
+.ends nmos
+
+.subckt pmos d g s width_P=0
+M2      d       g       s     vdd  CMOSP   W=width_P   L={2*LAMBDA}
++ AS={5*width_P*LAMBDA} PS={10*LAMBDA+2*width_P} AD={5*width_P*LAMBDA} PD={10*LAMBDA+2*width_P}
+.ends pmos
+
+
+.subckt xor a b vdd gnd out
+.param width_P={40*LAMBDA}
+.param width_N={20*LAMBDA}
+x11 b_inv b vdd gnd inv width_P={2*W} width_N={W}
+x12 a_inv a vdd gnd inv width_P={2*W} width_N={W}
+x21 a b out pmos width_P={2*W}
+x22 a b_inv out nmos width_N={W}
+x31 a_inv b_inv out pmos width_P={2*W}
+x32 a_inv b out nmos width_N={W}
+.ends xor
+
+x1 a1 a2 vdd gnd out1 xor
+
+*.dc vin 0 1.8 0.1
+.tran 0.1n 100n
+
+
+.control
+set hcopypscolor = 1 
+set color0=white 
+set color1=black 
+set color2 = red        
+set color3 = blue       
+set color4 = green
+set color5 = purple
+set color6 = yellow
+
+run
+plot  v(out1)
+.endc

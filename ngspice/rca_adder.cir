@@ -1,0 +1,109 @@
+.include TSMC_180nm.txt
+.param SUPPLY=1.8
+.param LAMBDA=0.09u
+.global gnd vdd
+.param W = 20*LAMBDA
+
+Vdd vdd gnd 'SUPPLY'
+vin_a0 a0 0 dc 0v
+vin_a1 a1 0 pulse 0 1.8 0ns 1ns 1ns 80ns
+vin_a2 a2 0 dc 0v
+vin_a3 a3 0 pulse 0 1.8 0ns 1ns 1ns 80ns
+
+vin_y0 b0 0 pulse 0 1.8 0ns 1ns 1ns 80ns
+vin_y1 b1 0 dc 0v
+vin_y2 b2 0 pulse 0 1.8 0ns 1ns 1ns 80ns
+vin_y3 b3 0 pulse 0 1.8 0ns 1ns 1ns 80ns
+
+//v_cin cin 0 dc 1.8v
+v_cin cin 0 pulse 0 1.8 0ns 1ns 1ns 80ns
+
+.subckt inv y x vdd gnd width_P=0 width_N=0
+M1 y x gnd gnd CMOSN W=width_N L={2*LAMBDA} AS={5*width_N*LAMBDA} PS={10*LAMBDA+2*width_N} AD={5*width_N*LAMBDA} PD={10*LAMBDA+2*width_N}
+M2 y x vdd vdd CMOSP W=width_P L={2*LAMBDA} AS={5*width_P*LAMBDA} PS={10*LAMBDA+2*width_P} AD={5*width_P*LAMBDA} PD={10*LAMBDA+2*width_P}
+.ends inv
+
+.subckt nmos d g s width_N=0
+M1 d g s gnd CMOSN W=width_N L={2*LAMBDA} AS={5*width_N*LAMBDA} PS={10*LAMBDA+2*width_N} AD={5*width_N*LAMBDA} PD={10*LAMBDA+2*width_N}
+.ends nmos
+
+.subckt pmos d g s width_P=0
+M2 d g s vdd CMOSP W=width_P L={2*LAMBDA} AS={5*width_P*LAMBDA} PS={10*LAMBDA+2*width_P} AD={5*width_P*LAMBDA} PD={10*LAMBDA+2*width_P}
+.ends pmos
+
+.subckt xor a b vdd gnd out
+.param width_P={48*LAMBDA}
+.param width_N={20*LAMBDA}
+x11 b_inv b vdd gnd inv width_P={4*W} width_N={W}
+x12 a_inv a vdd gnd inv width_P={4*W} width_N={W}
+x21 a b out pmos width_P={4*W}
+x22 a b_inv out nmos width_N={W}
+x31 a_inv b_inv out pmos width_P={4*W}
+x32 a_inv b out nmos width_N={W}
+.ends xor
+
+.subckt mux in0 in1 s out
+.param width_P={48*LAMBDA}
+.param width_N={20*LAMBDA}
+x0 s_inv s vdd gnd inv width_P={4*W} width_N={W}
+x11 a_inv in0 vdd gnd inv width_P={4*W} width_N={W}
+x12 a_inv s y_inv nmos width_N={W}
+x21 b_inv in1 vdd gnd inv width_P={4*W} width_N={W}
+x22 b_inv s_inv y_inv nmos width_N={W}
+x3 out y_inv vdd gnd inv width_P={6*W} width_N={0.45*W}
+.ends mux
+
+.subckt and a b out
+    x1 b gnd a out mux
+.ends and
+
+.subckt or a b out
+    x1 vdd b a out mux
+.ends or
+
+.subckt half_adder a b sum carry
+    x1 a b vdd gnd sum xor
+    x2 b gnd a carry mux
+.ends half_adder
+
+.subckt full_adder a b c_in sum c_out
+    x1 a b s1 c1 half_adder
+    x2 s1 c_in vdd gnd sum xor
+    x3 a b n1 or
+    x4 c_in n1 n2 and
+    x5 n2 c1 c_out or
+.ends full_adder
+
+.tran 0.1n 100n
+
+x1 a0 b0 cin s0 c1 full_adder
+x2 a1 b1 c1 s1 c2 full_adder
+x3 a2 b2 c2 s2 c3 full_adder
+x4 a3 b3 c3 s3 cout full_adder
+
+.measure tran tpdr TRIG v(cin) VAL='SUPPLY/2' RISE=1 TARG v(cout) VAL='SUPPLY/2' RISE=1
+.measure tran tpdf TRIG v(cin) VAL='SUPPLY/2' FALL=1 TARG v(cout) VAL='SUPPLY/2' FALL=1
+.measure tran tpd param='(tpdr+tpdf)/2'
+
+.control
+set hcopypscolor = 1 *White background for saving plots
+set color0=white ** color0 is used to set the background of the plot (manual sec:17.7))
+set color1=black ** color1 is used to set the grid color of the plot (manual sec:17.7))
+set color2 = red        
+set color3 = blue       
+set color4 = green
+set color5 = purple
+set color6 = yellow
+
+run
+
+//meas tpdr t_rise
+//+TRIG v(cin) VAL=1.8 RISE=1 
+//+TARG v(cout) VAL=1.8 RISE=1
+//meas tphl t_fall
+//+TRIG v(out) VAL=0 FALL=1 
+//+TARG v(out) VAL=1.8 FALL=1
+plot  v(cout) v(cin)
+//v(s1) v(s2) v(s3) 
+
+.endc

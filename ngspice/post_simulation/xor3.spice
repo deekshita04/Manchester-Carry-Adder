@@ -1,0 +1,49 @@
+* SPICE3 file created from xor3.ext - technology: scmos
+.include TSMC_180nm.txt
+.param SUPPLY=1.8
+.option scale=1u
+
+Vdd	vdd	gnd	'SUPPLY'
+vin_x1 A 0 pulse 0 1.82 0ns 1ns 1ns 20ns 40ns
+vin_x2 B 0 pulse 1.82 0 0ns 1ns 1ns 40ns 80ns
+
+M1000 out B_inv a_4_n81# Gnd CMOSN w=10 l=2
++  ad=100 pd=60 as=100 ps=60
+M1001 vdd A a_57_n18# w_n20_n39# CMOSP w=20 l=2
++  ad=400 pd=200 as=200 ps=100
+M1002 B_inv B gnd Gnd CMOSN w=10 l=2
++  ad=50 pd=30 as=200 ps=120
+M1003 a_4_n81# A_inv gnd Gnd CMOSN w=10 l=2
++  ad=0 pd=0 as=0 ps=0
+M1004 a_57_n18# B_inv out w_n20_n39# CMOSP w=20 l=2
++  ad=0 pd=0 as=200 ps=100
+M1005 B_inv B vdd Vdd CMOSP w=20 l=2
++  ad=100 pd=50 as=0 ps=0
+M1006 A_inv A vdd Vdd CMOSP w=20 l=2
++  ad=100 pd=50 as=0 ps=0
+M1007 A_inv A gnd Gnd CMOSN w=10 l=2
++  ad=50 pd=30 as=0 ps=0
+M1008 out B a_61_n81# Gnd CMOSN w=10 l=2
++  ad=0 pd=0 as=100 ps=60
+M1009 a_61_n81# A gnd Gnd CMOSN w=10 l=2
++  ad=0 pd=0 as=0 ps=0
+M1010 a_0_n18# B out w_n20_n39# CMOSP w=20 l=2
++  ad=200 pd=100 as=0 ps=0
+M1011 vdd A_inv a_0_n18# w_n20_n39# CMOSP w=20 l=2
++  ad=0 pd=0 as=0 ps=0
+
+.tran 0.1n 200n
+
+.control
+set hcopypscolor = 1 
+set color0=white 
+set color1=black 
+set color2 = red        
+set color3 = blue       
+set color4 = green
+set color5 = purple
+set color6 = yellow
+
+run
+plot  v(out) v(A) v(B)
+.endc

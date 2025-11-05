@@ -1,0 +1,135 @@
+
+.include TSMC_180nm.txt
+.param SUPPLY=1.8
+.param LAMBDA=0.09u
+.global gnd vdd
+.param W = 10*LAMBDA
+
+Vdd vdd gnd 'SUPPLY'
+vin_a0 a0 0 dc 0v
+vin_a1 a1 0 pulse 0 1.8 0ns 1ns 1ns 80ns
+vin_a2 a2 0 dc 0v
+vin_a3 a3 0 pulse 0 1.8 0ns 1ns 1ns 80ns
+
+vin_y0 b0 0 pulse 0 1.8 0ns 1ns 1ns 80ns
+vin_y1 b1 0 dc 0v
+vin_y2 b2 0 pulse 0 1.8 0ns 1ns 1ns 80ns
+vin_y3 b3 0 pulse 0 1.8 0ns 1ns 1ns 80ns
+
+//v_cin cin 0 dc 1.8v
+v_cin cin 0 pulse 0 1.8 0ns 1ns 1ns 80ns
+//Vdd	vdd	gnd	'SUPPLY'
+//vin_x1 a1 0 pulse 0 1.82 0ns 1ns 1ns 80ns 160ns
+//vin_x2 a2 0 pulse 0 1.82 0ns 1ns 1ns 40ns 80ns
+//vin_x3 a3 0 pulse 0 1.82 0ns 1ns 1ns 20ns 40ns
+//vin_x4 a4 0 pulse 0 1.82 0ns 1ns 1ns 10ns 20ns
+
+
+.subckt inv y x vdd gnd width_P=0 width_N=0
+M1      y       x       gnd     gnd  CMOSN   W=width_N   L={2*LAMBDA}
++ AS={5*width_N*LAMBDA} PS={10*LAMBDA+2*width_N} AD={5*width_N*LAMBDA} PD={10*LAMBDA+2*width_N}
+M2      y       x       vdd     vdd  CMOSP   W=width_P   L={2*LAMBDA}
++ AS={5*width_P*LAMBDA} PS={10*LAMBDA+2*width_P} AD={5*width_P*LAMBDA} PD={10*LAMBDA+2*width_P}
+.ends inv
+
+.subckt nmos d g s width_N=0
+M1      d       g       s     gnd     CMOSN   W=width_N   L={2*LAMBDA}
++ AS={5*width_N*LAMBDA} PS={10*LAMBDA+2*width_N} AD={5*width_N*LAMBDA} PD={10*LAMBDA+2*width_N}
+.ends nmos
+
+.subckt pmos d g s width_P=0
+M2      d       g       s     vdd     CMOSP   W=width_P   L={2*LAMBDA} 
++ AS={5*width_P*LAMBDA} PS={10*LAMBDA+2*width_P} AD={5*width_P*LAMBDA} PD={10*LAMBDA+2*width_P}
+.ends pmos
+
+.subckt xor a b vdd gnd out
+.param width_P={48*LAMBDA}
+.param width_N={20*LAMBDA}
+x11 b_inv b vdd gnd inv width_P={2*W} width_N={W}
+x12 a_inv a vdd gnd inv width_P={2*W} width_N={W}
+x21 a b out pmos width_P={2*W}
+x22 a b_inv out nmos width_N={W}
+x31 a_inv b_inv out pmos width_P={2*W}
+x32 a_inv b out nmos width_N={W}
+.ends xor
+
+
+.subckt mux in0 in1 s out
+.param width_P={48*LAMBDA}
+.param width_N={20*LAMBDA}
+x0 s_inv s vdd gnd inv width_P={2*W} width_N={W}
+x11 a_inv in0 vdd gnd inv width_P={2*W} width_N={W}
+x12 a_inv s y_inv nmos width_N={W}
+x21 b_inv in1 vdd gnd inv width_P={2*W} width_N={W}
+x22 b_inv s_inv y_inv nmos width_N={W}
+x3 out y_inv vdd gnd inv width_P={6*W} width_N={0.45*W}
+.ends mux
+
+.subckt and a b out
+    x1 b gnd a out mux
+.ends and
+
+.subckt or a b out
+    x1 vdd b a out mux
+.ends or
+
+
+.subckt carry_chain en a b cin vdd gnd cout p
+.param width_P={48*LAMBDA}
+.param width_N={20*LAMBDA}
+x0 a1 a2 vdd gnd p xor
+x1 a b g and
+x2 n1 en vdd pmos width_P={2*w}
+x3 cin p n1 nmos width_N={W}
+x4 n1 g n2 nmos width_N={W}
+x5 n2 en gnd nmos width_N={W}
+x6 cout n1 vdd gnd inv width_P={2*w} width_N=(W)
+.ends carry_chain
+
+.tran 0.1n 100n
+
+x11 1.8v a0 b0 cin vdd gnd c1 p1 carry_chain
+x21 1.8v a1 b1 c1 vdd gnd c2 p2 carry_chain
+x31 1.8v a2 b2 c2 vdd gnd c3 p3 carry_chain
+x41 1.8v a3 b3 c3 vdd gnd cout p4 carry_chain
+
+//x11 1.8v a0 b0 cin vdd gnd c1 p1 carry_chain
+//x12 p1 c1 vdd gnd s0_inv xor
+//x13 s0 s0_inv vdd gnd inv width_P={4*W} width_N={W}
+//x21 1.8v a1 b1 c1 vdd gnd c2 p2 carry_chain
+//x22 p2 c2 vdd gnd s1_inv xor
+//x23 s1 s1_inv vdd gnd inv width_P={4*W} width_N={W}
+//x31 1.8v a2 b2 c2 vdd gnd c3 p3 carry_chain
+//x32 p3 c3 vdd gnd s2_inv xor
+//x33 s2 s2_inv vdd gnd inv width_P={4*W} width_N={W}
+//x41 1.8v a3 b3 c3 vdd gnd cout p4 carry_chain
+//x42 p4 cout vdd gnd s3_inv xor
+//x43 s3 s3_inv vdd gnd inv width_P={4*W} width_N={W}
+
+
+.measure tran tpdr TRIG v(cin) VAL='SUPPLY/2' RISE=1 TARG v(cout) VAL='SUPPLY/2' RISE=1
+.measure tran tpdf TRIG v(cin) VAL='SUPPLY/2' FALL=1 TARG v(cout) VAL='SUPPLY/2' FALL=1
+.measure tran tpd param='(tpdr+tpdf)/2'
+
+.control
+set hcopypscolor = 1 *White background for saving plots
+set color0=white ** color0 is used to set the background of the plot (manual sec:17.7))
+set color1=black ** color1 is used to set the grid color of the plot (manual sec:17.7))
+set color2 = red        
+set color3 = blue       
+set color4 = green
+set color5 = purple
+set color6 = yellow
+
+run
+
+//meas tpdr t_rise
+//+TRIG v(cin) VAL=1.8 RISE=1 
+//+TARG v(cout) VAL=1.8 RISE=1
+//meas tphl t_fall
+//+TRIG v(out) VAL=0 FALL=1 
+//+TARG v(out) VAL=1.8 FALL=1
+plot  v(cout) v(cin)
+//v(s1) v(s2) v(s3) 
+
+.endc
